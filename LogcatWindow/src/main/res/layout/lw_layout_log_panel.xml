@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="#aa000000"
+    android:orientation="vertical"
+    tools:parentTag="android.widget.RelativeLayout">
+
+    <ListView
+        android:id="@+id/lw_lv_data"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/lw_extra_bottom" />
+
+    <ImageButton
+        android:id="@+id/lw_btn_close"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignParentEnd="true"
+        android:background="?android:selectableItemBackgroundBorderless"
+        android:src="@drawable/lw_icon_close"
+        android:tint="#ffffff"
+        tools:ignore="ContentDescription" />
+
+    <LinearLayout
+        android:id="@+id/lw_extra_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#32FFFFFF"
+        android:orientation="vertical"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp">
+
+            <EditText
+                android:id="@+id/lw_tv_filter"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="5"
+                android:backgroundTint="#ffffff"
+                android:hint="Filter"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:textColor="#ffffff"
+                android:textColorHint="#C3C3C3"
+                android:textSize="16sp"
+                tools:ignore="HardcodedText,LabelFor" />
+
+            <com.mct.logcatwindow.view.CustomSpinner
+                android:id="@+id/lw_spn_level"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="4"
+                android:backgroundTint="#ffffff"
+                android:popupBackground="#4A4A4A"
+                tools:listitem="@layout/lw_layout_log_level_item" />
+
+            <ImageButton
+                android:id="@+id/lw_btn_setting"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?android:selectableItemBackgroundBorderless"
+                android:src="@drawable/lw_icon_setting"
+                android:tint="#ffffff"
+                tools:ignore="ContentDescription" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/lw_extra_setting"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="8dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:ignore="UselessParent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="32dp"
+                    android:text="H:"
+                    android:textColor="#ffffff"
+                    tools:ignore="HardcodedText" />
+
+                <SeekBar
+                    android:id="@+id/lw_sb_height"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:paddingHorizontal="8dp"
+                    android:progressBackgroundTint="#ffffff"
+                    android:progressTint="#B3E5FC"
+                    android:thumbTint="#B3E5FC" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:ignore="UselessParent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="32dp"
+                    android:text="W:"
+                    android:textColor="#ffffff"
+                    tools:ignore="HardcodedText" />
+
+                <SeekBar
+                    android:id="@+id/lw_sb_width"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:paddingHorizontal="8dp"
+                    android:progressBackgroundTint="#ffffff"
+                    android:progressTint="#B3E5FC"
+                    android:thumbTint="#B3E5FC" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:ignore="UselessParent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="32dp"
+                    android:text="T:"
+                    android:textColor="#ffffff"
+                    tools:ignore="HardcodedText" />
+
+                <SeekBar
+                    android:id="@+id/lw_sb_touch"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:paddingHorizontal="8dp"
+                    android:progressBackgroundTint="#ffffff"
+                    android:progressTint="#B3E5FC"
+                    android:thumbTint="#B3E5FC" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</merge>

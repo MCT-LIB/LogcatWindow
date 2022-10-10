@@ -1,7 +1,5 @@
 package com.mct.logcatwindow.model;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
 public class TraceObject {

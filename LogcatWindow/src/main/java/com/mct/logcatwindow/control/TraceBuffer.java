@@ -41,7 +41,6 @@ public class TraceBuffer {
         if (tracesToDiscard > 0) {
             this.discardTraces(tracesToDiscard);
         }
-
         return tracesToDiscard;
     }
 

@@ -41,7 +41,6 @@ public class LogCat extends Thread {
         if (this.bufferedReader == null && this.process != null) {
             this.bufferedReader = new BufferedReader(new InputStreamReader(this.process.getInputStream()));
         }
-
         return this.bufferedReader;
     }
 

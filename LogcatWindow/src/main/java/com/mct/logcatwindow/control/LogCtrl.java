@@ -33,7 +33,6 @@ public class LogCtrl implements LogManager.Listener {
             this.logManager.registerListener(this);
             this.logManager.startReading();
         }
-
     }
 
     public void pause() {
@@ -42,7 +41,6 @@ public class LogCtrl implements LogManager.Listener {
             this.logManager.unregisterListener();
             this.logManager.stopReading();
         }
-
     }
 
     public void setLogConfig(LogConfig config) {
@@ -54,11 +52,10 @@ public class LogCtrl implements LogManager.Listener {
         if (this.logManager != null) {
             this.logManager.setLogConfig(logConfig);
         }
-
     }
 
-    private void updateBufferConfig(@NonNull LogConfig lynxConfig) {
-        this.traceBuffer.setBufferSize(lynxConfig.getMaxNumberOfTracesToShow());
+    private void updateBufferConfig(@NonNull LogConfig logConfig) {
+        this.traceBuffer.setBufferSize(logConfig.getMaxNumberOfTracesToShow());
         this.refreshTraces();
     }
 
@@ -77,14 +74,11 @@ public class LogCtrl implements LogManager.Listener {
     }
 
     public void updateFilter(String filter) {
-        if (this.isInitialized) {
-            LogConfig lynxConfig = this.logManager.getLogConfig();
-            lynxConfig.setFilter(filter);
-            this.logManager.setLogConfig(lynxConfig);
+        if (this.isInitialized && !this.logManager.getLogConfig().getFilter().equals(filter)) {
+            this.logManager.getLogConfig().setFilter(filter);
             this.clearView();
             this.restartLog();
         }
-
     }
 
     private void clearView() {
@@ -112,13 +106,10 @@ public class LogCtrl implements LogManager.Listener {
 
     public void updateFilterTraceLevel(TraceLevel level) {
         if (this.isInitialized) {
+            this.logManager.getLogConfig().setFilterTraceLevel(level);
             this.clearView();
-            LogConfig lynxConfig = this.logManager.getLogConfig();
-            lynxConfig.setFilterTraceLevel(level);
-            this.logManager.setLogConfig(lynxConfig);
             this.restartLog();
         }
-
     }
 
     private void restartLog() {

@@ -3,7 +3,23 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/drawable/ic_test.xml" value="0.1855" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/drawable/lw_bubble_icon.xml" value="0.1855" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/drawable/lw_bubble_icon_close.xml" value="0.1855" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/drawable/lw_bubble_icon_close_selected.xml" value="0.1855" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/drawable/lw_icon_close.xml" value="0.1855" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/drawable/lw_icon_setting.xml" value="0.1855" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/drawable/lw_selector_bubble_close.xml" value="0.1855" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/layout/bubble_layout.xml" value="0.3536458333333333" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/layout/layout_logview.xml" value="0.25" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/layout/lw_layout_bubble.xml" value="0.5" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/layout/lw_layout_bubble_trash.xml" value="0.3536458333333333" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/layout/lw_layout_log_level_item.xml" value="0.35260416666666666" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/layout/lw_layout_log_panel.xml" value="0.25" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/LogcatWindow/src/main/res/layout/lw_layout_logview.xml" value="0.25" />
         <entry key="..\:/Android/Projects/Library/LogcatWindow/app/src/main/res/layout/activity_main.xml" value="0.33" />
+        <entry key="..\:/Android/Projects/Library/LogcatWindow/app/src/main/res/layout/bubble_layout.xml" value="0.35260416666666666" />
+        <entry key="..\:/Android/SDK/platforms/android-32/data/res/layout/simple_list_item_1.xml" value="0.3536458333333333" />
       </map>
     </option>
   </component>

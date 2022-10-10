@@ -5,7 +5,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.mct.logcatwindow.LogConfig;
-import com.mct.logcatwindow.utils.LogUtils;
+import com.mct.logcatwindow.utils.Utils;
 
 import java.lang.Thread.State;
 import java.util.LinkedList;
@@ -16,12 +16,13 @@ public class LogManager {
     private final MainThread mainThread;
     private List<TraceObject> tracesBuffer;
     private Listener listener;
-    private LogConfig logConfig = new LogConfig();
+    private LogConfig logConfig;
     private long lastNotification;
 
     public LogManager(LogCat logCat, MainThread mainThread) {
         this.logCat = logCat;
         this.mainThread = mainThread;
+        this.logConfig = new LogConfig();
         this.tracesBuffer = new LinkedList<>();
     }
 
@@ -31,7 +32,7 @@ public class LogManager {
             LogManager.this.notifyNewTraces();
         });
         if (this.logCat.getState().equals(State.NEW)) {
-            Log.d(LogUtils.LOGCAT_WINDOW_TAG, "logCatThread start-----");
+            Log.d(Utils.LOGCAT_WINDOW_TAG, "logCatThread start-----");
             this.logCat.start();
         }
     }
@@ -71,8 +72,8 @@ public class LogManager {
 
             try {
                 traceObject = TraceObject.fromString(trace);
-            } catch (Exception var4) {
-                var4.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
             if (traceObject != null) {
@@ -88,11 +89,17 @@ public class LogManager {
         return !hasFilterConfigured || this.traceMatchesFilter(trace);
     }
 
-    private synchronized boolean traceMatchesFilter(@NonNull String logcatTrace) {
-        TraceLevel levelFilter = this.logConfig.getFilterTraceLevel();
-        String filter = this.logConfig.getFilter().toLowerCase();
-        String logcatTraceLowercase = logcatTrace.toLowerCase();
-        return logcatTraceLowercase.contains(filter) && this.containsTraceLevel(logcatTrace, levelFilter);
+    private boolean traceMatchesFilter(@NonNull String logcatTrace) {
+        if (containsTraceLevel(logcatTrace, this.logConfig.getFilterTraceLevel())) {
+            String logcatTraceLowercase = logcatTrace.toLowerCase();
+            for (String filter : this.logConfig.getSubFilter()) {
+                if (logcatTraceLowercase.contains(filter)) {
+                    return true;
+                }
+            }
+            return logcatTraceLowercase.contains(this.logConfig.getFilter().toLowerCase());
+        }
+        return false;
     }
 
     private boolean containsTraceLevel(String logcatTrace, @NonNull TraceLevel levelFilter) {
@@ -108,7 +115,7 @@ public class LogManager {
         long now = System.currentTimeMillis();
         long timeFromLastNotification = now - this.lastNotification;
         boolean hasTracesToNotify = this.tracesBuffer.size() > 0;
-        return timeFromLastNotification > (long)this.logConfig.getSamplingRate() && hasTracesToNotify;
+        return timeFromLastNotification > (long) this.logConfig.getSamplingRate() && hasTracesToNotify;
     }
 
     private void notifyNewTraces() {
@@ -117,7 +124,6 @@ public class LogManager {
             this.tracesBuffer.clear();
             this.finalNotification(traces);
         }
-
     }
 
     private synchronized void finalNotification(final List<TraceObject> tracesBuffer) {

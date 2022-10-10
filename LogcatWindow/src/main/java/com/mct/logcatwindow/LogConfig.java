@@ -3,20 +3,26 @@ package com.mct.logcatwindow;
 import androidx.annotation.NonNull;
 
 import com.mct.logcatwindow.model.TraceLevel;
-import com.mct.logcatwindow.utils.LogUtils;
+import com.mct.logcatwindow.utils.Utils;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LogConfig implements Serializable, Cloneable {
-    private static final long serialVersionUID = 293939299388293L;
-    private static final float DEFAULT_TEXT_SIZE_IN_PX = 36.0F;
-    private int maxNumberOfTracesToShow = 800;
-    private String filter = LogUtils.LOGCAT_WINDOW_TAG;
+
+    private static final int MAX_TRACES_TO_SHOW = 500;
+
+    private int maxNumberOfTracesToShow;
+    private String filter;
+    private final List<String> subFilter;
     private TraceLevel filterTraceLevel;
-    private Float textSizeInPx;
     private int samplingRate = 150;
 
     public LogConfig() {
+        this.maxNumberOfTracesToShow = MAX_TRACES_TO_SHOW;
+        this.filter = Utils.LOGCAT_WINDOW_TAG;
+        this.subFilter = new ArrayList<>();
         this.filterTraceLevel = TraceLevel.VERBOSE;
     }
 
@@ -34,6 +40,13 @@ public class LogConfig implements Serializable, Cloneable {
             throw new IllegalArgumentException("filter can't be null");
         } else {
             this.filter = filter;
+            this.subFilter.clear();
+            for (String s : filter.split("\\|")) {
+                s = s.trim();
+                if (!s.isEmpty()) {
+                    this.subFilter.add(s.toLowerCase());
+                }
+            }
             return this;
         }
     }
@@ -45,11 +58,6 @@ public class LogConfig implements Serializable, Cloneable {
             this.filterTraceLevel = filterTraceLevel;
             return this;
         }
-    }
-
-    public LogConfig setTextSizeInPx(float textSizeInPx) {
-        this.textSizeInPx = textSizeInPx;
-        return this;
     }
 
     public LogConfig setSamplingRate(int samplingRate) {
@@ -65,20 +73,16 @@ public class LogConfig implements Serializable, Cloneable {
         return this.filter;
     }
 
+    public List<String> getSubFilter() {
+        return subFilter;
+    }
+
     public TraceLevel getFilterTraceLevel() {
         return this.filterTraceLevel;
     }
 
     public boolean hasFilter() {
         return !"".equals(this.filter) || !TraceLevel.VERBOSE.equals(this.filterTraceLevel);
-    }
-
-    public float getTextSizeInPx() {
-        return this.textSizeInPx == null ? DEFAULT_TEXT_SIZE_IN_PX : this.textSizeInPx;
-    }
-
-    public boolean hasTextSizeInPx() {
-        return this.textSizeInPx != null;
     }
 
     public int getSamplingRate() {
@@ -91,28 +95,21 @@ public class LogConfig implements Serializable, Cloneable {
         } else if (!(o instanceof LogConfig)) {
             return false;
         } else {
-            LogConfig that = (LogConfig)o;
+            LogConfig that = (LogConfig) o;
             if (this.maxNumberOfTracesToShow != that.maxNumberOfTracesToShow) {
                 return false;
             } else if (this.samplingRate != that.samplingRate) {
                 return false;
             } else {
-                label41: {
+                mLabel:
+                {
                     if (this.filter != null) {
                         if (this.filter.equals(that.filter)) {
-                            break label41;
+                            break mLabel;
                         }
                     } else if (that.filter == null) {
-                        break label41;
+                        break mLabel;
                     }
-                    return false;
-                }
-
-                if (this.textSizeInPx != null) {
-                    if (!this.textSizeInPx.equals(that.textSizeInPx)) {
-                        return false;
-                    }
-                } else if (that.textSizeInPx != null) {
                     return false;
                 }
 
@@ -124,7 +121,6 @@ public class LogConfig implements Serializable, Cloneable {
     public int hashCode() {
         int result = this.maxNumberOfTracesToShow;
         result = 31 * result + (this.filter != null ? this.filter.hashCode() : 0);
-        result = 31 * result + (this.textSizeInPx != null ? this.textSizeInPx.hashCode() : 0);
         result = 31 * result + this.samplingRate;
         return result;
     }
@@ -137,6 +133,6 @@ public class LogConfig implements Serializable, Cloneable {
 
     @NonNull
     public String toString() {
-        return "LynxConfig{maxNumberOfTracesToShow=" + this.maxNumberOfTracesToShow + ", filter='" + this.filter + '\'' + ", textSizeInPx=" + this.textSizeInPx + ", samplingRate=" + this.samplingRate + '}';
+        return "LogConfig{maxNumberOfTracesToShow=" + this.maxNumberOfTracesToShow + ", filter='" + this.filter + ", samplingRate=" + this.samplingRate + '}';
     }
 }

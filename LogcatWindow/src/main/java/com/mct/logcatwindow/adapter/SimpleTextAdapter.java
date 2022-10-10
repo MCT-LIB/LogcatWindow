@@ -31,7 +31,7 @@ public class SimpleTextAdapter extends BaseAdapter {
     }
 
     public long getItemId(int position) {
-        return (long) position;
+        return position;
     }
 
     @SuppressLint("SetTextI18n")
@@ -39,27 +39,33 @@ public class SimpleTextAdapter extends BaseAdapter {
         ViewHolder viewHolder;
         if (convertView == null) {
             TextView textView = new TextView(this.context);
-            textView.setPadding(16, 4, 0, 4);
+            textView.setPadding(16, 8, 0, 8);
             convertView = textView;
             viewHolder = new ViewHolder();
             viewHolder.logView = textView;
             textView.setTag(viewHolder);
         } else {
-            viewHolder = (ViewHolder) ((View) convertView).getTag();
+            viewHolder = (ViewHolder) convertView.getTag();
         }
-
-        TraceObject traceObject = (TraceObject) this.data.get(position);
-        viewHolder.logView.setText("[" + traceObject.getTraceLevel() + "]   " + traceObject.getDate() + "   " + traceObject.getMessage());
+        TraceObject traceObject = this.data.get(position);
+        viewHolder.logView.setText("[" + traceObject.getTraceLevel() + "]   " + traceObject.getDate() + "\n" + traceObject.getMessage());
         viewHolder.logView.setTextColor(-1);
-        if (traceObject.getMessage().contains("[console]")) {
-            viewHolder.logView.setTextColor(-16711936);
-        }
 
-        if (traceObject.getTraceLevel() == TraceLevel.ERROR) {
-            viewHolder.logView.setTextColor(Color.parseColor("#ff4416"));
+        color:
+        {
+            if (traceObject.getTraceLevel() == TraceLevel.WARNING) {
+                viewHolder.logView.setTextColor(Color.parseColor("#ffb22f"));
+                break color;
+            }
+            if (traceObject.getTraceLevel() == TraceLevel.INFO) {
+                viewHolder.logView.setTextColor(Color.parseColor("#6ecfff"));
+                break color;
+            }
+            if (traceObject.getTraceLevel() == TraceLevel.ERROR) {
+                viewHolder.logView.setTextColor(Color.parseColor("#ff4416"));
+            }
         }
-
-        return (View) convertView;
+        return convertView;
     }
 
     static class ViewHolder {

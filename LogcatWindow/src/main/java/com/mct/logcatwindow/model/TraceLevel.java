@@ -2,7 +2,6 @@ package com.mct.logcatwindow.model;
 
 public enum TraceLevel {
     VERBOSE("V"),
-    JS("J"),
     DEBUG("D"),
     INFO("I"),
     WARNING("W"),
@@ -31,6 +30,7 @@ public enum TraceLevel {
             case 'D':
             case 'G':
             case 'H':
+            case 'J':
             case 'K':
             case 'L':
             case 'M':
@@ -53,9 +53,6 @@ public enum TraceLevel {
                 break;
             case 'I':
                 traceLevel = INFO;
-                break;
-            case 'J':
-                traceLevel = JS;
                 break;
             case 'V':
                 traceLevel = VERBOSE;

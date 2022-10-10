@@ -3,5 +3,6 @@
     package="com.mct.logcatwindow">
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
 </manifest>

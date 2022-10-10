@@ -1,26 +1,24 @@
 package com.mct.logcatwindow;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
-public class MainActivity extends AppCompatActivity {
+import androidx.appcompat.app.AppCompatActivity;
 
-    private LogWindow logWindow;
+public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        logWindow = new LogWindow(this, getApplication());
         findViewById(R.id.btn_show_logcat).setOnClickListener(v -> {
-            if (logWindow.isAdd()) {
-                logWindow.removeLogView();
-            } else {
-                logWindow.createLogView();
-            }
+            LogWindow.init(this);
+            LogWindow.instance().attachBubbleControl(this);
+        });
+        findViewById(R.id.btn_next).setOnClickListener(v -> {
+            Log.i("ddd", "onCreate: new Activity");
+            startActivity(new Intent(this, MainActivity.class));
         });
     }
-
 }
