@@ -15,7 +15,7 @@ import com.permissionx.guolindev.callback.RequestCallback;
 
 public class Utils {
 
-    public static final String LOGCAT_WINDOW_TAG = "Logcat Window";
+    public static final String LOGCAT_WINDOW_TAG = "Logcat_Window";
     private static final Point display;
 
     static {

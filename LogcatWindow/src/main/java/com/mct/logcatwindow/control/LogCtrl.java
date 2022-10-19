@@ -43,6 +43,10 @@ public class LogCtrl implements LogManager.Listener {
         }
     }
 
+    public void clearLogcat() {
+        this.logManager.clearLogcat();
+    }
+
     public void setLogConfig(LogConfig config) {
         this.updateBufferConfig(config);
         this.updateLogConfig(config);
@@ -96,7 +100,6 @@ public class LogCtrl implements LogManager.Listener {
         } else {
             this.logInteract.enableAutoScroll();
         }
-
     }
 
     private boolean shouldDisableAutoScroll(int lastVisiblePosition) {

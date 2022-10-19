@@ -29,7 +29,7 @@ public class LogCat extends Thread {
         BufferedReader bufferedReader = this.getBufferedReader();
         String trace;
         try {
-            for (trace = bufferedReader.readLine(); trace != null && this.continueReading; trace = bufferedReader.readLine()) {
+            while ((trace = bufferedReader.readLine()) != null && this.continueReading) {
                 this.notifyListener(trace);
             }
         } catch (IOException e) {
@@ -53,11 +53,19 @@ public class LogCat extends Thread {
     public void run() {
         super.run();
         try {
-            this.process = Runtime.getRuntime().exec("logcat -v time");
+            this.process = Runtime.getRuntime().exec("logcat -v time -T 500");
         } catch (IOException e) {
             e.printStackTrace();
         }
         this.readLogCat();
+    }
+
+    public void clear() {
+        try {
+            Runtime.getRuntime().exec("logcat -b all -c");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public interface LogCatListener {

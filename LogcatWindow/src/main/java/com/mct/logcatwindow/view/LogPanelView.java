@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -245,7 +244,6 @@ public class LogPanelView extends RelativeLayout implements LogCtrl.LogInteract 
         this.logManager = new LogManager(new LogCat(), new LogMainThread());
         LogConfig logConfig = new LogConfig();
         this.logCtrl = new LogCtrl(this.logManager, this, logConfig);
-        this.logCtrl.resume();
         this.filterEditText.setText(logConfig.getFilter());
     }
 
@@ -258,20 +256,11 @@ public class LogPanelView extends RelativeLayout implements LogCtrl.LogInteract 
     }
 
     @Override
-    protected void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-        this.pausePresenter();
-        Log.d(Utils.LOGCAT_WINDOW_TAG, "View destroys");
-    }
-
-    @Override
     protected void onVisibilityChanged(View changedView, int visibility) {
         super.onVisibilityChanged(changedView, visibility);
         if (changedView == this) {
             if (visibility == 0) {
                 this.resumePresenter();
-            } else {
-                this.pausePresenter();
             }
         }
     }
@@ -292,9 +281,11 @@ public class LogPanelView extends RelativeLayout implements LogCtrl.LogInteract 
         }
     }
 
-    private void pausePresenter() {
+    public void dispose() {
         if (this.isPresenterReady()) {
             this.logCtrl.pause();
+            this.logCtrl.clearLogcat();
+            this.logCtrl = null;
         }
     }
 

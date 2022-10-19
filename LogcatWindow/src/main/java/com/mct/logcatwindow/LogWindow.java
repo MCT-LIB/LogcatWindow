@@ -1,15 +1,14 @@
 package com.mct.logcatwindow;
 
-import static com.mct.logcatwindow.utils.ParamsUtils.correctLayoutPosition;
-import static com.mct.logcatwindow.utils.ParamsUtils.getWindowParams;
-
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -18,11 +17,12 @@ import android.view.View.OnKeyListener;
 import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 import android.view.WindowManager.LayoutParams;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentActivity;
 
-import com.mct.logcatwindow.utils.ParamsUtils;
+import com.mct.logcatwindow.utils.LogWindowPreferences;
 import com.mct.logcatwindow.utils.ScreenMetrics;
 import com.mct.logcatwindow.utils.Utils;
 import com.mct.logcatwindow.view.LogPanelView;
@@ -31,6 +31,8 @@ import com.mct.logcatwindow.view.bubble.BubbleLayout;
 import com.mct.logcatwindow.view.bubble.BubbleTrashLayout;
 import com.mct.logcatwindow.view.bubble.BubblesManager;
 
+import org.jetbrains.annotations.Contract;
+
 public class LogWindow {
 
     private static final int MIN_HEIGHT = Utils.dp2px(170);
@@ -38,39 +40,25 @@ public class LogWindow {
     private static final int MAX_TOUCH = Utils.dp2px(40);
     private static final int INIT_TOUCH = Utils.dp2px(20);
 
-    /**
-     * Name of the preference file.
-     */
-    private static final String PREFERENCE_NAME = "LogWindow";
-
-    private static final String KEY_LANDSCAPE_PANEL_X = "KEY_LANDSCAPE_PANEL_X";
-    private static final String KEY_LANDSCAPE_PANEL_Y = "KEY_LANDSCAPE_PANEL_Y";
-    private static final String KEY_LANDSCAPE_HEIGHT = "KEY_HEIGHT_LANDSCAPE";
-    private static final String KEY_LANDSCAPE_WIDTH = "KEY_WIDTH_LANDSCAPE";
-
-    private static final String KEY_PORTRAIT_PANEL_X = "KEY_PORTRAIT_PANEL_X";
-    private static final String KEY_PORTRAIT_PANEL_Y = "KEY_PORTRAIT_PANEL_Y";
-    private static final String KEY_PORTRAIT_HEIGHT = "KEY_HEIGHT_PORTRAIT";
-    private static final String KEY_PORTRAIT_WIDTH = "KEY_WIDTH_PORTRAIT";
-
-    private final SharedPreferences pref;
+    private final LogWindowPreferences preferences;
     private final ScreenMetrics screenMetrics;
     private final WindowManager windowManager;
+
     private BubblesManager bubblesManager;
 
     private BubbleTrashLayout trashLayout;
     private BubbleLayout bubbleLayout;
 
-    private LogPanelView mLogPanel;
-    private LayoutParams mLogPanelParams;
-
+    private LogPanelView logPanel;
+    private LayoutParams logPanelParams;
 
     private static LogWindow instance;
 
     private LogWindow(@NonNull Context context) {
         this.screenMetrics = new ScreenMetrics(context);
-        this.pref = context.getSharedPreferences(PREFERENCE_NAME, Context.MODE_PRIVATE);
         this.windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        this.preferences = LogWindowPreferences.getInstance(context);
+
         initBubble(context);
         initPanel(context);
     }
@@ -94,6 +82,7 @@ public class LogWindow {
     public static void dispose() {
         if (instance != null) {
             instance.detachLogPanel();
+            instance.logPanel.dispose();
             instance.screenMetrics.dispose();
             instance.bubblesManager.dispose();
             instance = null;
@@ -103,7 +92,7 @@ public class LogWindow {
 
     @SuppressWarnings("unused")
     public LogWindow setLogConfig(LogConfig logConfig) {
-        mLogPanel.getLogManager().setLogConfig(logConfig);
+        logPanel.getLogManager().setLogConfig(logConfig);
         return this;
     }
 
@@ -114,7 +103,7 @@ public class LogWindow {
                     bubblesManager.setTrash(trashLayout);
                 }
                 if (!bubbleLayout.isAttachedToWindow()) {
-                    bubbleLayout.getViewParams().x = 0;
+                    bubbleLayout.getViewParams().x = -20;
                     bubbleLayout.getViewParams().y = 200;
                     bubblesManager.addBubble(bubbleLayout);
                 }
@@ -123,33 +112,33 @@ public class LogWindow {
     }
 
     private void attachLogPanel() {
-        if (!mLogPanel.isAttachedToWindow()) {
+        if (!logPanel.isAttachedToWindow()) {
             bubbleLayout.setVisibility(View.GONE);
             screenMetrics.computeSelf();
             loadPanelPosition(screenMetrics.getOrientation());
-            windowManager.addView(mLogPanel, mLogPanelParams);
+            windowManager.addView(logPanel, logPanelParams);
             Log.d(Utils.LOGCAT_WINDOW_TAG, "attach LogView");
         }
     }
 
     private void detachLogPanel() {
-        if (mLogPanel.isAttachedToWindow()) {
+        if (logPanel.isAttachedToWindow()) {
             bubbleLayout.setVisibility(View.VISIBLE);
             savePanelPosition(screenMetrics.getOrientation());
-            windowManager.removeViewImmediate(mLogPanel);
+            windowManager.removeView(logPanel);
             Log.d(Utils.LOGCAT_WINDOW_TAG, "detach LogView");
         }
     }
 
     @SuppressLint("InflateParams")
     private void initBubble(Context context) {
-        bubblesManager = new BubblesManager(windowManager);
+        bubblesManager = BubblesManager.getInstance(windowManager);
 
         trashLayout = new BubbleTrashLayout(context);
         LayoutInflater.from(context).inflate(R.layout.lw_layout_bubble_trash, trashLayout, true);
-        int x = (Utils.getScreenWidth() - trashLayout.getChildAt(0).getLayoutParams().width) / 2;
-        int y = Utils.getScreenHeight() - 150;
-        trashLayout.setViewParams(ParamsUtils.getWindowParams(
+        int x = (Utils.getScreenWidth() - trashLayout.getTrashContent().getLayoutParams().width) / 2;
+        int y = Utils.getScreenHeight() - trashLayout.getTrashContent().getLayoutParams().height - 32;
+        trashLayout.setViewParams(getWindowParams(
                 x, y,
                 LayoutParams.WRAP_CONTENT,
                 LayoutParams.WRAP_CONTENT,
@@ -157,7 +146,7 @@ public class LogWindow {
         );
 
         bubbleLayout = (BubbleLayout) LayoutInflater.from(context).inflate(R.layout.lw_layout_bubble, null);
-        bubbleLayout.setViewParams(ParamsUtils.getWindowParams(
+        bubbleLayout.setViewParams(getWindowParams(
                 0, 0,
                 LayoutParams.WRAP_CONTENT,
                 LayoutParams.WRAP_CONTENT,
@@ -173,8 +162,11 @@ public class LogWindow {
 
     @SuppressLint("ClickableViewAccessibility")
     private void initPanel(Context context) {
-        mLogPanel = new LogPanelView(context);
-        mLogPanelParams = getWindowParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, true);
+        logPanel = new LogPanelView(context);
+        logPanelParams = getWindowParams(0, 0,
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
+                true);
         OnTouchListener onTouchListener = new OnTouchListener() {
 
             private final Point moveInitPos = new Point();
@@ -183,15 +175,15 @@ public class LogWindow {
             public boolean onTouch(View v, @NonNull MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        mLogPanel.requestFocus();
-                        moveInitPos.set(mLogPanelParams.x, mLogPanelParams.y);
+                        logPanel.requestFocus();
+                        moveInitPos.set(logPanelParams.x, logPanelParams.y);
                         moveInitTouchPos.set((int) event.getRawX(), (int) event.getRawY());
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         int x = moveInitPos.x + (int) (event.getRawX() - moveInitTouchPos.x);
                         int y = moveInitPos.y + (int) (event.getRawY() - moveInitTouchPos.y);
-                        LayoutParams params = correctLayoutPosition(screenMetrics.getDisplaySize(), mLogPanelParams, x, y);
-                        windowManager.updateViewLayout(mLogPanel, params);
+                        LayoutParams params = correctLayoutPosition(screenMetrics.getDisplaySize(), logPanelParams, x, y);
+                        windowManager.updateViewLayout(logPanel, params);
                         return true;
                     case MotionEvent.ACTION_OUTSIDE:
                         detachLogPanel();
@@ -204,29 +196,29 @@ public class LogWindow {
         OnWindowChangeListener onWindowChangeListener = new OnWindowChangeListener() {
             @Override
             public void changeWindowHeight(int height) {
-                mLogPanelParams.height = height + MIN_HEIGHT;
-                LayoutParams params = correctLayoutPosition(screenMetrics.getDisplaySize(), mLogPanelParams);
-                windowManager.updateViewLayout(mLogPanel, params);
+                logPanelParams.height = height + MIN_HEIGHT;
+                LayoutParams params = correctLayoutPosition(screenMetrics.getDisplaySize(), logPanelParams);
+                windowManager.updateViewLayout(logPanel, params);
             }
 
             @Override
             public void changeWindowWidth(int width) {
-                mLogPanelParams.width = width + MIN_WIDTH;
-                LayoutParams params = correctLayoutPosition(screenMetrics.getDisplaySize(), mLogPanelParams);
-                windowManager.updateViewLayout(mLogPanel, params);
+                logPanelParams.width = width + MIN_WIDTH;
+                LayoutParams params = correctLayoutPosition(screenMetrics.getDisplaySize(), logPanelParams);
+                windowManager.updateViewLayout(logPanel, params);
             }
 
             @Override
             public void onDropDownChanged(boolean isOpened) {
                 if (isOpened) {
-                    mLogPanelParams.flags &= ~WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
-                    mLogPanelParams.flags |= WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
+                    logPanelParams.flags &= ~WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
+                    logPanelParams.flags |= WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
                 } else {
-                    mLogPanelParams.flags |= WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
-                    mLogPanelParams.flags &= ~WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
-                    mLogPanel.requestFocus();
+                    logPanelParams.flags |= WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
+                    logPanelParams.flags &= ~WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
+                    logPanel.requestFocus();
                 }
-                windowManager.updateViewLayout(mLogPanel, mLogPanelParams);
+                windowManager.updateViewLayout(logPanel, logPanelParams);
             }
 
             @Override
@@ -242,33 +234,33 @@ public class LogWindow {
             }
             return false;
         };
-        mLogPanel.setOnTouchListener(onTouchListener);
-        mLogPanel.setChangeWindowListener(onWindowChangeListener);
-        mLogPanel.setOnKeyListener(onKeyListener);
+        logPanel.setOnTouchListener(onTouchListener);
+        logPanel.setChangeWindowListener(onWindowChangeListener);
+        logPanel.setOnKeyListener(onKeyListener);
     }
 
     private void onOrientationChanged() {
-        if (trashLayout.isAttachedToWindow()) {
-            Point display = screenMetrics.getDisplaySize();
-            int x = (display.x - trashLayout.getChildAt(0).getLayoutParams().width) / 2;
-            int y = display.y - 150;
-            trashLayout.getViewParams().x = x;
-            trashLayout.getViewParams().y = y;
-            windowManager.updateViewLayout(trashLayout, trashLayout.getViewParams());
-        }
+        Toast.makeText(trashLayout.getContext(), "is LANDSCAPE: "
+                        + (screenMetrics.getOrientation() == Configuration.ORIENTATION_LANDSCAPE),
+                Toast.LENGTH_SHORT).show();
+        Point display = screenMetrics.getDisplaySize();
+        int x = (display.x - trashLayout.getTrashContent().getLayoutParams().width) / 2;
+        int y = display.y - trashLayout.getTrashContent().getLayoutParams().height - 32;
 
-        if (bubbleLayout.isAttachedToWindow()) {
-            bubbleLayout.getViewParams().x = 0;
-            bubbleLayout.getViewParams().y = 200;
-            windowManager.updateViewLayout(bubbleLayout, bubbleLayout.getViewParams());
-        }
+        trashLayout.getViewParams().x = x;
+        trashLayout.getViewParams().y = y;
+        trashLayout.updateLayoutParams();
+
+        bubbleLayout.getViewParams().x = -20;
+        bubbleLayout.getViewParams().y = 200;
+        bubbleLayout.updateLayoutParams();
 
         savePanelPosition(screenMetrics.getOrientation() == Configuration.ORIENTATION_LANDSCAPE
                 ? Configuration.ORIENTATION_PORTRAIT
                 : Configuration.ORIENTATION_LANDSCAPE);
         loadPanelPosition(screenMetrics.getOrientation());
-        if (mLogPanel.isAttachedToWindow()) {
-            windowManager.updateViewLayout(mLogPanel, mLogPanelParams);
+        if (logPanel.isAttachedToWindow()) {
+            windowManager.updateViewLayout(logPanel, logPanelParams);
         }
     }
 
@@ -278,33 +270,29 @@ public class LogWindow {
      * @param orientation the orientation to load the position for.
      */
     private void loadPanelPosition(int orientation) {
-        Bundle extraData = new Bundle();
-        int x, y, height, width;
         Point display = screenMetrics.getDisplaySize();
-        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            x = pref.getInt(KEY_LANDSCAPE_PANEL_X, 0);
-            y = pref.getInt(KEY_LANDSCAPE_PANEL_Y, 0);
-
-            height = pref.getInt(KEY_LANDSCAPE_HEIGHT, display.y);
-            width = pref.getInt(KEY_LANDSCAPE_WIDTH, display.x / 3);
+        boolean isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE;
+        Point defaultSize = new Point();
+        if (isLandscape) {
+            defaultSize.set(display.x / 3, display.y);
         } else {
-            x = pref.getInt(KEY_PORTRAIT_PANEL_X, 0);
-            y = pref.getInt(KEY_PORTRAIT_PANEL_Y, 0);
-
-            height = pref.getInt(KEY_PORTRAIT_HEIGHT, display.y / 3);
-            width = pref.getInt(KEY_PORTRAIT_WIDTH, display.x);
+            defaultSize.set(display.x, display.y / 3);
         }
+        Point position = preferences.getPanelPosition(isLandscape);
+        Point size = preferences.getPanelSize(defaultSize, isLandscape);
+
+        Bundle extraData = new Bundle();
         extraData.putInt(LogPanelView.KEY_MAX_HEIGHT, display.y - MIN_HEIGHT);
         extraData.putInt(LogPanelView.KEY_MAX_WIDTH, display.x - MIN_WIDTH);
         extraData.putInt(LogPanelView.KEY_MAX_TOUCH, MAX_TOUCH);
-        extraData.putInt(LogPanelView.KEY_HEIGHT, height - MIN_HEIGHT);
-        extraData.putInt(LogPanelView.KEY_WIDTH, width - MIN_WIDTH);
+        extraData.putInt(LogPanelView.KEY_HEIGHT, Math.max(size.y - MIN_HEIGHT, MIN_HEIGHT));
+        extraData.putInt(LogPanelView.KEY_WIDTH, Math.max(size.x - MIN_WIDTH, MIN_WIDTH));
         extraData.putInt(LogPanelView.KEY_TOUCH, INIT_TOUCH);
-        mLogPanel.setData(extraData);
-        mLogPanelParams.height = height;
-        mLogPanelParams.width = width;
-        mLogPanelParams.x = x;
-        mLogPanelParams.y = y;
+        logPanel.setData(extraData);
+        logPanelParams.height = (int) extraData.get(LogPanelView.KEY_HEIGHT) + MIN_HEIGHT;
+        logPanelParams.width = (int) extraData.get(LogPanelView.KEY_WIDTH) + MIN_WIDTH;
+        logPanelParams.x = position.x;
+        logPanelParams.y = position.y;
     }
 
     /**
@@ -313,21 +301,61 @@ public class LogWindow {
      * @param orientation the orientation to save the position for.
      */
     private void savePanelPosition(int orientation) {
-        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            pref.edit()
-                    .putInt(KEY_LANDSCAPE_PANEL_X, mLogPanelParams.x)
-                    .putInt(KEY_LANDSCAPE_PANEL_Y, mLogPanelParams.y)
-                    .putInt(KEY_LANDSCAPE_HEIGHT, mLogPanelParams.height)
-                    .putInt(KEY_LANDSCAPE_WIDTH, mLogPanelParams.width)
-                    .apply();
+        Point position = new Point(logPanelParams.x, logPanelParams.y);
+        Point size = new Point(logPanelParams.width, logPanelParams.height);
+        boolean isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE;
+        preferences.savePanelPosition(position, size, isLandscape);
+    }
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Internal Utils
+    ///////////////////////////////////////////////////////////////////////////
+
+    @NonNull
+    @Contract("_, _, _, _, _ -> new")
+    static WindowManager.LayoutParams getWindowParams(int x, int y, int width, int height, boolean focusable) {
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                width, height,
+                getType(), getFlag(focusable),
+                PixelFormat.TRANSLUCENT
+        );
+        params.gravity = Gravity.TOP | Gravity.START;
+        params.x = x;
+        params.y = y;
+        return params;
+    }
+
+    private static int getType() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                : WindowManager.LayoutParams.TYPE_PHONE;
+    }
+
+    private static int getFlag(boolean focusable) {
+        if (focusable) {
+            return WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                    | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
+            // | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         } else {
-            pref.edit()
-                    .putInt(KEY_PORTRAIT_PANEL_X, mLogPanelParams.x)
-                    .putInt(KEY_PORTRAIT_PANEL_Y, mLogPanelParams.y)
-                    .putInt(KEY_PORTRAIT_HEIGHT, mLogPanelParams.height)
-                    .putInt(KEY_PORTRAIT_WIDTH, mLogPanelParams.width)
-                    .apply();
+            return WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                    | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
         }
+    }
+
+    @NonNull
+    private static WindowManager.LayoutParams correctLayoutPosition(
+            Point displaySize, @NonNull WindowManager.LayoutParams params) {
+        return correctLayoutPosition(displaySize, params, params.x, params.y);
+    }
+
+
+    @NonNull
+    private static WindowManager.LayoutParams correctLayoutPosition(
+            Point displaySize, @NonNull WindowManager.LayoutParams params, int x, int y) {
+        params.x = x < 0 ? 0 : Math.min(x, displaySize.x - params.width);
+        params.y = y < 0 ? 0 : Math.min(y, displaySize.y - params.height);
+        return params;
     }
 
 }

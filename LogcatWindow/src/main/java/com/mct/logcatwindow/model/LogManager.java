@@ -32,7 +32,7 @@ public class LogManager {
             LogManager.this.notifyNewTraces();
         });
         if (this.logCat.getState().equals(State.NEW)) {
-            Log.d(Utils.LOGCAT_WINDOW_TAG, "logCatThread start-----");
+            Log.d(Utils.LOGCAT_WINDOW_TAG, "logCatThread start ---");
             this.logCat.start();
         }
     }
@@ -66,6 +66,10 @@ public class LogManager {
         this.logCat.interrupt();
     }
 
+    public void clearLogcat() {
+        this.logCat.clear();
+    }
+
     private synchronized void addTraceToBuffer(String trace) {
         if (this.shouldAddTrace(trace)) {
             TraceObject traceObject = null;
@@ -85,19 +89,21 @@ public class LogManager {
     }
 
     private boolean shouldAddTrace(String trace) {
-        boolean hasFilterConfigured = this.logConfig.hasFilter();
-        return !hasFilterConfigured || this.traceMatchesFilter(trace);
+        return !this.logConfig.hasFilter() || this.traceMatchesFilter(trace);
     }
 
-    private boolean traceMatchesFilter(@NonNull String logcatTrace) {
-        if (containsTraceLevel(logcatTrace, this.logConfig.getFilterTraceLevel())) {
-            String logcatTraceLowercase = logcatTrace.toLowerCase();
-            for (String filter : this.logConfig.getSubFilter()) {
-                if (logcatTraceLowercase.contains(filter)) {
-                    return true;
+    private boolean traceMatchesFilter(String logcatTrace) {
+        try {
+            if (containsTraceLevel(logcatTrace, this.logConfig.getFilterTraceLevel())) {
+                String logcatTraceLowercase = logcatTrace.toLowerCase();
+                for (String filter : this.logConfig.getSubFilter()) {
+                    if (logcatTraceLowercase.contains(filter)) {
+                        return true;
+                    }
                 }
+                return logcatTraceLowercase.contains(this.logConfig.getFilter().toLowerCase());
             }
-            return logcatTraceLowercase.contains(this.logConfig.getFilter().toLowerCase());
+        } catch (Throwable ignored) {
         }
         return false;
     }

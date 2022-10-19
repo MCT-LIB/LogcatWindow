@@ -3,13 +3,13 @@ package com.mct.logcatwindow.view.bubble;
 import android.animation.AnimatorInflater;
 import android.animation.AnimatorSet;
 import android.content.Context;
-import android.os.Vibrator;
 import android.util.AttributeSet;
+import android.view.HapticFeedbackConstants;
+import android.view.View;
 
 import com.mct.logcatwindow.R;
 
 public class BubbleTrashLayout extends BubbleBaseLayout {
-    public static final int VIBRATION_DURATION_IN_MS = 70;
     private boolean magnetismApplied = false;
     private boolean isVibrateInThisSession = false;
 
@@ -49,8 +49,7 @@ public class BubbleTrashLayout extends BubbleBaseLayout {
 
     void vibrate() {
         if (!isVibrateInThisSession) {
-            final Vibrator vibrator = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
-            vibrator.vibrate(VIBRATION_DURATION_IN_MS);
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
             isVibrateInThisSession = true;
         }
     }
@@ -64,6 +63,10 @@ public class BubbleTrashLayout extends BubbleBaseLayout {
         isVibrateInThisSession = false;
     }
 
+    public View getTrashContent() {
+        return getChildAt(0);
+    }
+
     private void playAnimation(int animationResourceId) {
         if (!isInEditMode()) {
             AnimatorSet animator = (AnimatorSet) AnimatorInflater
@@ -72,4 +75,5 @@ public class BubbleTrashLayout extends BubbleBaseLayout {
             animator.start();
         }
     }
+
 }

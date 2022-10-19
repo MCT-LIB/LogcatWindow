@@ -1,19 +1,19 @@
 package com.mct.logcatwindow.view.bubble;
 
-import static com.mct.logcatwindow.utils.ParamsUtils.correctLayoutPosition;
-
 import android.animation.AnimatorInflater;
 import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Point;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 import android.view.WindowManager;
 
 import com.mct.logcatwindow.R;
+import com.mct.logcatwindow.utils.SpringInterpolator;
 import com.mct.logcatwindow.utils.Utils;
 
 public class BubbleLayout extends BubbleBaseLayout {
@@ -21,9 +21,7 @@ public class BubbleLayout extends BubbleBaseLayout {
     private OnBubbleRemoveListener onBubbleRemoveListener;
     private OnBubbleClickListener onBubbleClickListener;
     private RequestDisplayListener requestDisplayListener = Utils::getDisplay;
-    private static final int TOUCH_TIME_THRESHOLD = 175;
-    private final MoveAnimator animator;
-    private boolean shouldStickToWall = true;
+    private final ObjectAnimator xAnimator;
 
     public BubbleLayout(Context context) {
         this(context, null);
@@ -35,7 +33,8 @@ public class BubbleLayout extends BubbleBaseLayout {
 
     public BubbleLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        animator = new MoveAnimator();
+        xAnimator = ObjectAnimator.ofFloat(this, WINDOW_X, 0);
+        xAnimator.setInterpolator(SpringInterpolator.softSpring());
         initializeView();
     }
 
@@ -49,10 +48,6 @@ public class BubbleLayout extends BubbleBaseLayout {
 
     public void setRequestDisplayListener(RequestDisplayListener requestDisplayListener) {
         this.requestDisplayListener = requestDisplayListener;
-    }
-
-    public void setShouldStickToWall(boolean shouldStick) {
-        this.shouldStickToWall = shouldStick;
     }
 
     void notifyBubbleRemoved() {
@@ -75,47 +70,53 @@ public class BubbleLayout extends BubbleBaseLayout {
         playAnimation();
     }
 
+    private static final int STATE_DOWN = 0;
+    private static final int STATE_MOVE = 1;
+
+    private int state;
     private final Point moveInitPos = new Point();
     private final Point moveInitTouchPos = new Point();
-    private long lastTouchDown;
-    private boolean isShowTrash;
 
     @Override
     @SuppressLint("ClickableViewAccessibility")
     public boolean onTouchEvent(MotionEvent event) {
         if (event != null) {
+            event.offsetLocation(getViewParams().x, getViewParams().y);
+            WindowManager.LayoutParams params = getViewParams();
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    isShowTrash = false;
-                    lastTouchDown = System.currentTimeMillis();
-                    moveInitPos.set(getViewParams().x, getViewParams().y);
+                    state = STATE_DOWN;
+                    xAnimator.cancel();
+                    moveInitPos.set(params.x, params.y);
                     moveInitTouchPos.set((int) event.getRawX(), (int) event.getRawY());
                     playAnimationClickDown();
-                    animator.stop();
                     break;
                 case MotionEvent.ACTION_MOVE:
                     int x = moveInitPos.x + (int) (event.getRawX() - moveInitTouchPos.x);
                     int y = moveInitPos.y + (int) (event.getRawY() - moveInitTouchPos.y);
-                    WindowManager.LayoutParams params = correctLayoutPosition(
-                            requestDisplayListener.request(),
-                            getViewParams(),
-                            x, y
-                    );
+                    params.x = x;
+                    params.y = y < 0 ? 0 : Math.min(y, requestDisplayListener.request().y - params.height);
                     getWindowManager().updateViewLayout(this, params);
-                    if (isShowTrash || System.currentTimeMillis() - lastTouchDown > TOUCH_TIME_THRESHOLD) {
-                        isShowTrash = true;
+                    if (state != STATE_MOVE) {
+                        int touchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
+                        if (Math.abs(event.getRawX() - moveInitTouchPos.x) >= touchSlop
+                                || Math.abs(event.getRawY() - moveInitTouchPos.y) >= touchSlop) {
+                            state = STATE_MOVE;
+                        }
+                    } else {
                         if (getLayoutCoordinator() != null) {
                             getLayoutCoordinator().notifyBubblePositionChanged(this);
                         }
                     }
                     break;
                 case MotionEvent.ACTION_UP:
+                    Log.e("ddd", "ACTION_UP: ");
                     goToWall();
                     if (getLayoutCoordinator() != null) {
                         getLayoutCoordinator().notifyBubbleRelease(this);
                         playAnimationClickUp();
                     }
-                    if (System.currentTimeMillis() - lastTouchDown < TOUCH_TIME_THRESHOLD) {
+                    if (state == STATE_DOWN) {
                         if (onBubbleClickListener != null) {
                             onBubbleClickListener.onBubbleClick(this);
                         }
@@ -154,49 +155,12 @@ public class BubbleLayout extends BubbleBaseLayout {
     }
 
     public void goToWall() {
-        if (shouldStickToWall) {
-            int width = requestDisplayListener.request().x;
-            int middle = width / 2;
-            float nearestXWall = getViewParams().x >= middle ? width - getMeasuredWidth() : 0;
-            animator.start(nearestXWall, getViewParams().y);
-        }
-    }
-
-    private void move(float deltaX, float deltaY) {
-        getViewParams().x += deltaX;
-        getViewParams().y += deltaY;
-        getWindowManager().updateViewLayout(this, getViewParams());
-    }
-
-    private class MoveAnimator implements Runnable {
-        private final Handler handler = new Handler(Looper.getMainLooper());
-        private float destinationX;
-        private float destinationY;
-        private long startingTime;
-
-        private void start(float x, float y) {
-            this.destinationX = x;
-            this.destinationY = y;
-            startingTime = System.currentTimeMillis();
-            handler.post(this);
-        }
-
-        @Override
-        public void run() {
-            if (getRootView() != null && getRootView().getParent() != null) {
-                float progress = Math.min(1, (System.currentTimeMillis() - startingTime) / 400f);
-                float deltaX = (destinationX - getViewParams().x) * progress;
-                float deltaY = (destinationY - getViewParams().y) * progress;
-                move(deltaX, deltaY);
-                if (progress < 1) {
-                    handler.post(this);
-                }
-            }
-        }
-
-        private void stop() {
-            handler.removeCallbacks(this);
-        }
+        int width = requestDisplayListener.request().x;
+        int middle = width / 2;
+        float nearestXWall = getViewParams().x >= middle ? width - getMeasuredWidth() + 24 : -24;
+        xAnimator.setFloatValues(nearestXWall);
+        xAnimator.setDuration(1000);
+        xAnimator.start();
     }
 
     public interface OnBubbleRemoveListener {
