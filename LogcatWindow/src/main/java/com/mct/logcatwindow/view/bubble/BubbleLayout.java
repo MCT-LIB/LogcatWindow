@@ -2,26 +2,25 @@ package com.mct.logcatwindow.view.bubble;
 
 import android.animation.AnimatorInflater;
 import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
-import android.view.ViewConfiguration;
-import android.view.WindowManager;
+import android.view.View;
+
+import androidx.annotation.NonNull;
+import androidx.dynamicanimation.animation.FloatPropertyCompat;
 
 import com.mct.logcatwindow.R;
-import com.mct.logcatwindow.utils.SpringInterpolator;
 import com.mct.logcatwindow.utils.Utils;
+import com.mct.touchutils.TouchUtils;
 
 public class BubbleLayout extends BubbleBaseLayout {
 
     private OnBubbleRemoveListener onBubbleRemoveListener;
     private OnBubbleClickListener onBubbleClickListener;
     private RequestDisplayListener requestDisplayListener = Utils::getDisplay;
-    private final ObjectAnimator xAnimator;
 
     public BubbleLayout(Context context) {
         this(context, null);
@@ -33,8 +32,6 @@ public class BubbleLayout extends BubbleBaseLayout {
 
     public BubbleLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        xAnimator = ObjectAnimator.ofFloat(this, WINDOW_X, 0);
-        xAnimator.setInterpolator(SpringInterpolator.softSpring());
         initializeView();
     }
 
@@ -58,6 +55,70 @@ public class BubbleLayout extends BubbleBaseLayout {
 
     private void initializeView() {
         setClickable(true);
+        TouchUtils.setTouchListener(this, new TouchUtils.FlingMoveToWallListener() {
+
+            final FloatPropertyCompat<View> propertyCompatX, propertyCompatY;
+
+            {
+                propertyCompatX = WINDOW_X.getPropertyCompat();
+                propertyCompatY = WINDOW_Y.getPropertyCompat();
+            }
+
+            @NonNull
+            @Override
+            protected Rect initArea(View view) {
+                int offset = 24;
+                return new Rect(-offset, -offset,
+                        requestDisplayListener.request().x + offset,
+                        requestDisplayListener.request().y + offset);
+            }
+
+            @Override
+            protected FloatPropertyCompat<View> getPropX() {
+                return propertyCompatX;
+            }
+
+            @Override
+            protected FloatPropertyCompat<View> getPropY() {
+                return propertyCompatY;
+            }
+
+            @Override
+            protected float getFrictionY() {
+                return 2;
+            }
+
+            @Override
+            protected boolean onDown(View view, MotionEvent event) {
+                playAnimationClickDown();
+                return true;
+            }
+
+            @Override
+            protected boolean onMove(View view, MotionEvent event) {
+                if (isTouching()) {
+                    if (getLayoutCoordinator() != null) {
+                        getLayoutCoordinator().notifyBubblePositionChanged(BubbleLayout.this);
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            protected boolean onStop(View view, MotionEvent event) {
+                if (getLayoutCoordinator() != null) {
+                    getLayoutCoordinator().notifyBubbleRelease(BubbleLayout.this);
+                    playAnimationClickUp();
+                }
+                if (!isTouching()) {
+                    if (onBubbleClickListener != null) {
+                        onBubbleClickListener.onBubbleClick(BubbleLayout.this);
+                    }
+                }
+                return true;
+            }
+
+        });
     }
 
     @Override
@@ -68,63 +129,6 @@ public class BubbleLayout extends BubbleBaseLayout {
             getViewParams().height = getMeasuredHeight();
         });
         playAnimation();
-    }
-
-    private static final int STATE_DOWN = 0;
-    private static final int STATE_MOVE = 1;
-
-    private int state;
-    private final Point moveInitPos = new Point();
-    private final Point moveInitTouchPos = new Point();
-
-    @Override
-    @SuppressLint("ClickableViewAccessibility")
-    public boolean onTouchEvent(MotionEvent event) {
-        if (event != null) {
-            event.offsetLocation(getViewParams().x, getViewParams().y);
-            WindowManager.LayoutParams params = getViewParams();
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    state = STATE_DOWN;
-                    xAnimator.cancel();
-                    moveInitPos.set(params.x, params.y);
-                    moveInitTouchPos.set((int) event.getRawX(), (int) event.getRawY());
-                    playAnimationClickDown();
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    int x = moveInitPos.x + (int) (event.getRawX() - moveInitTouchPos.x);
-                    int y = moveInitPos.y + (int) (event.getRawY() - moveInitTouchPos.y);
-                    params.x = x;
-                    params.y = y < 0 ? 0 : Math.min(y, requestDisplayListener.request().y - params.height);
-                    getWindowManager().updateViewLayout(this, params);
-                    if (state != STATE_MOVE) {
-                        int touchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
-                        if (Math.abs(event.getRawX() - moveInitTouchPos.x) >= touchSlop
-                                || Math.abs(event.getRawY() - moveInitTouchPos.y) >= touchSlop) {
-                            state = STATE_MOVE;
-                        }
-                    } else {
-                        if (getLayoutCoordinator() != null) {
-                            getLayoutCoordinator().notifyBubblePositionChanged(this);
-                        }
-                    }
-                    break;
-                case MotionEvent.ACTION_UP:
-                    Log.e("ddd", "ACTION_UP: ");
-                    goToWall();
-                    if (getLayoutCoordinator() != null) {
-                        getLayoutCoordinator().notifyBubbleRelease(this);
-                        playAnimationClickUp();
-                    }
-                    if (state == STATE_DOWN) {
-                        if (onBubbleClickListener != null) {
-                            onBubbleClickListener.onBubbleClick(this);
-                        }
-                    }
-                    break;
-            }
-        }
-        return super.onTouchEvent(event);
     }
 
     private void playAnimation() {
@@ -152,15 +156,6 @@ public class BubbleLayout extends BubbleBaseLayout {
             animator.setTarget(this);
             animator.start();
         }
-    }
-
-    public void goToWall() {
-        int width = requestDisplayListener.request().x;
-        int middle = width / 2;
-        float nearestXWall = getViewParams().x >= middle ? width - getMeasuredWidth() + 24 : -24;
-        xAnimator.setFloatValues(nearestXWall);
-        xAnimator.setDuration(1000);
-        xAnimator.start();
     }
 
     public interface OnBubbleRemoveListener {
