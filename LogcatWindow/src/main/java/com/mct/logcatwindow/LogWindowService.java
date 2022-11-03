@@ -6,7 +6,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.graphics.Rect;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -18,6 +17,7 @@ import com.mct.logcatwindow.utils.Utils;
 
 public class LogWindowService extends Service {
 
+    public static final String EXTRA_LOG_CONFIG = "log_config";
     public static final String EXTRA_CUTOUT_SAFE_AREA = "cutout_safe_area";
 
     private static final int NOTIFY_ID = 369;
@@ -43,9 +43,10 @@ public class LogWindowService extends Service {
         if (!isInit) {
             isInit = true;
             LogWindow.init(this);
-            LogWindow.instance().setSafeInsetRect((Rect) intent.getParcelableExtra(EXTRA_CUTOUT_SAFE_AREA));
-            LogWindow.instance().setOnDisposeListener(this::stopSelf);
-            LogWindow.instance().attachBubbleControl(this);
+            LogWindow.instance()
+                    .setLogConfig((LogConfig) intent.getSerializableExtra(EXTRA_LOG_CONFIG))
+                    .setSafeInsetRect(intent.getParcelableExtra(EXTRA_CUTOUT_SAFE_AREA))
+                    .attachBubbleControl(this, this::stopSelf);
             startForeground(NOTIFY_ID, createNotification());
         }
         return super.onStartCommand(intent, flags, startId);

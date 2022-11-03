@@ -11,7 +11,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnKeyListener;
@@ -22,6 +21,7 @@ import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 
+import com.mct.bubblechat.BubbleRemoveListener;
 import com.mct.bubblechat.BubblesManager;
 import com.mct.logcatwindow.utils.LogWindowPreferences;
 import com.mct.logcatwindow.utils.ScreenMetrics;
@@ -29,7 +29,7 @@ import com.mct.logcatwindow.utils.Utils;
 import com.mct.logcatwindow.view.LogPanelView;
 import com.mct.logcatwindow.view.LogPanelView.OnWindowChangeListener;
 
-public class LogWindow {
+class LogWindow {
 
     private static final int MIN_HEIGHT = Utils.dp2px(170);
     private static final int MIN_WIDTH = Utils.dp2px(150);
@@ -46,7 +46,6 @@ public class LogWindow {
     private LayoutParams logPanelParams;
     private boolean isLoadedPanel;
 
-    private OnDisposeListener mOnDisposeListener;
     private final Object lock = new Object();
     boolean isAttach;
 
@@ -82,9 +81,6 @@ public class LogWindow {
             instance.logPanel.dispose();
             instance.screenMetrics.dispose();
             instance.bubblesManager.dispose();
-            if (instance.mOnDisposeListener != null) {
-                instance.mOnDisposeListener.onDispose();
-            }
             instance = null;
             Log.d(Utils.LOGCAT_WINDOW_TAG, "dispose");
         }
@@ -92,24 +88,18 @@ public class LogWindow {
 
     @SuppressWarnings("unused")
     public LogWindow setLogConfig(LogConfig logConfig) {
-        logPanel.getLogManager().setLogConfig(logConfig);
+        if (logConfig != null) {
+            logPanel.getLogManager().setLogConfig(logConfig);
+        }
         return this;
     }
 
-    public void setSafeInsetRect(Rect safeInsetRect) {
+    public LogWindow setSafeInsetRect(Rect safeInsetRect) {
         bubblesManager.setSafeInsetRect(safeInsetRect);
+        return this;
     }
 
-    public void setOnDisposeListener(OnDisposeListener listener) {
-        mOnDisposeListener = listener;
-    }
-
-    public void attachBubbleControl(Context context) {
-
-        if (!bubblesManager.isEmpty()) {
-            return;
-        }
-
+    public void attachBubbleControl(Context context, BubbleRemoveListener listener) {
         BubblesManager.Options options = new BubblesManager.Options();
         options.overMargin = BUBBLE_OVER_MARGIN;
         options.initX = -BUBBLE_OVER_MARGIN;
@@ -117,7 +107,7 @@ public class LogWindow {
         options.floatingViewWidth = Utils.dp2px(64);
         options.floatingViewHeight = Utils.dp2px(64);
         options.onClickListener = v -> attachLogPanel();
-        options.bubbleRemoveListener = LogWindow::dispose;
+        options.bubbleRemoveListener = listener;
 
         bubblesManager.addBubble(getBubbleView(context), options);
     }
@@ -317,9 +307,5 @@ public class LogWindow {
     private static void correctLayoutPosition(Point displaySize, @NonNull LayoutParams params, int x, int y) {
         params.x = x < 0 ? 0 : Math.min(x, displaySize.x - params.width);
         params.y = y < 0 ? 0 : Math.min(y, displaySize.y - params.height);
-    }
-
-    public interface OnDisposeListener {
-        void onDispose();
     }
 }

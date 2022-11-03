@@ -7,7 +7,6 @@ import com.mct.logcatwindow.utils.Utils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.List;
 
 public class LogConfig implements Serializable, Cloneable {
 
@@ -15,7 +14,7 @@ public class LogConfig implements Serializable, Cloneable {
 
     private int maxNumberOfTracesToShow;
     private String filter;
-    private final List<String> subFilter;
+    private final ArrayList<String> subFilter;
     private TraceLevel filterTraceLevel;
     private int samplingRate = 150;
 
@@ -41,8 +40,7 @@ public class LogConfig implements Serializable, Cloneable {
         } else {
             this.filter = filter;
             this.subFilter.clear();
-            for (String s : filter.split("\\|")) {
-                s = s.trim();
+            for (String s : filter.split(" *\\| *")) {
                 if (!s.isEmpty()) {
                     this.subFilter.add(s.toLowerCase());
                 }
@@ -73,7 +71,7 @@ public class LogConfig implements Serializable, Cloneable {
         return this.filter;
     }
 
-    public List<String> getSubFilter() {
+    public ArrayList<String> getSubFilter() {
         return subFilter;
     }
 
