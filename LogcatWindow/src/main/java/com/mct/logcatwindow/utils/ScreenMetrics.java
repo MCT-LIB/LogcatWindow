@@ -5,20 +5,21 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.graphics.Insets;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.os.Build;
 import android.util.Log;
 import android.view.Display;
+import android.view.KeyCharacterMap;
+import android.view.KeyEvent;
 import android.view.Surface;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
 
 import androidx.annotation.NonNull;
-
-import java.util.Objects;
 
 public class ScreenMetrics {
 
@@ -45,14 +46,14 @@ public class ScreenMetrics {
     private int orientation;
 
     /**
-     * The display size.
-     */
-    private Point displaySize;
-
-    /**
      * The real size of device.
      */
-    private Point realSize;
+    private Point screenSize;
+
+    /**
+     * The Insets of device.
+     */
+    private Rect screenInsets;
 
     /**
      * Listen to the configuration changes and calls [orientationListener] when needed.
@@ -73,19 +74,35 @@ public class ScreenMetrics {
 
     public void computeSelf() {
         orientation = computeOrientation();
-        computeScreenSize();
+        screenSize = computeScreenSize();
+    }
+
+    public boolean isLandscape() {
+        return orientation == Configuration.ORIENTATION_LANDSCAPE;
     }
 
     public int getOrientation() {
         return orientation;
     }
 
-    public Point getDisplaySize() {
-        return displaySize;
+    public Point getScreenSize() {
+        return screenSize;
     }
 
-    public Point getRealSize() {
-        return realSize;
+    public Rect getScreenInsets() {
+        return screenInsets;
+    }
+
+    /**
+     * Without system bar, cutout layout
+     *
+     * @return Point
+     */
+    public Point getRealDisplay() {
+        return new Point(
+                screenSize.x - screenInsets.right - screenInsets.left,
+                screenSize.y - screenInsets.bottom - screenInsets.top
+        );
     }
 
     /**
@@ -122,64 +139,19 @@ public class ScreenMetrics {
      * Update orientation and screen size, if needed. Should be called after a configuration change.
      */
     private void updateScreenMetrics() {
-        int newOrientation = computeOrientation();
-        if (orientation != newOrientation) {
-            orientation = newOrientation;
-            computeScreenSize();
-            if (orientationListener != null) {
-                Log.e(TAG, "updateScreenMetrics: " + displaySize.x + "|" + displaySize.y);
-                Log.e(TAG, "updateScreenMetrics: " + realSize.x + "|" + realSize.y);
-                orientationListener.onOrientationChanged();
-            }
+        Log.e(TAG, "updateScreenMetrics: ");
+        computeSelf();
+        if (orientationListener != null) {
+            Log.e(TAG, "updateScreenMetrics: " + screenSize.x + "|" + screenSize.y);
+            orientationListener.onOrientationChanged();
         }
-    }
-
-    private void computeScreenSize() {
-        Point displaySize, realSize;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            final WindowMetrics metrics = context.getSystemService(WindowManager.class).getCurrentWindowMetrics();
-            // Gets all excluding insets
-            final WindowInsets windowInsets = metrics.getWindowInsets();
-
-            Insets insets = windowInsets.getInsetsIgnoringVisibility(
-                    WindowInsets.Type.statusBars() |
-                            WindowInsets.Type.navigationBars() |
-                            WindowInsets.Type.displayCutout());
-            Log.e(TAG, "computeScreenSize: inset " + insets);
-            // let remove bottom nav if device has
-            int insetsWidth = insets.right + insets.left;
-            int insetsHeight = insets.top + insets.bottom;
-
-            // size that Display#getSize reports
-            final Rect bounds = metrics.getBounds();
-            realSize = new Point(bounds.width(), bounds.height());
-            displaySize = new Point(bounds.width() - insetsWidth, bounds.height() - insetsHeight);
-        } else {
-            displaySize = new Point();
-            realSize = new Point();
-            display.getSize(displaySize);
-            display.getRealSize(realSize);
-        }
-
-        // Some phone can be messy with the size change with the orientation. Correct it here.
-        if (orientation == Configuration.ORIENTATION_PORTRAIT && displaySize.x > displaySize.y ||
-                orientation == Configuration.ORIENTATION_LANDSCAPE && displaySize.x < displaySize.y) {
-            int nx = displaySize.y;
-            int ny = displaySize.x;
-            displaySize = new Point(nx, ny);
-            nx = realSize.y;
-            ny = realSize.x;
-            realSize = new Point(nx, ny);
-        }
-        this.displaySize = displaySize;
-        this.realSize = realSize;
     }
 
     /**
      * @return the orientation of the screen.
      */
-    public int computeOrientation() {
-        int rotation = Objects.requireNonNull(display).getRotation();
+    private int computeOrientation() {
+        int rotation = display.getRotation();
         Log.e(TAG, "computeOrientation: " + rotation);
         switch (rotation) {
             case Surface.ROTATION_0:
@@ -193,4 +165,74 @@ public class ScreenMetrics {
         }
     }
 
+    @NonNull
+    private Point computeScreenSize() {
+        Point screenSize = new Point();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            final WindowMetrics metrics = context.getSystemService(WindowManager.class).getCurrentWindowMetrics();
+            // Gets all excluding insets
+            int type = WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout();
+            Insets insets = metrics.getWindowInsets().getInsetsIgnoringVisibility(type);
+            screenInsets = new Rect(insets.left, insets.top, insets.right, insets.bottom);
+            // size that Display#getSize reports
+            final Rect bounds = metrics.getBounds();
+            screenSize.set(bounds.width(), bounds.height());
+        } else {
+            screenInsets = computeScreenInsets();
+            display.getRealSize(screenSize);
+        }
+        Log.e(TAG, "computeScreenSize: inset " + screenInsets);
+        return screenSize;
+    }
+
+    /**
+     * for SDK < 30
+     *
+     * @return rect of inset
+     */
+    @NonNull
+    private Rect computeScreenInsets() {
+        int rotation = display.getRotation();
+        Rect insets = new Rect();
+        switch (rotation) {
+            default:
+            case Surface.ROTATION_0:
+                insets.top = getStatusBarHeight();
+                insets.bottom = getNavigationBarHeight();
+                break;
+            case Surface.ROTATION_180:
+                insets.top = getNavigationBarHeight();
+                insets.bottom = getStatusBarHeight();
+                break;
+            case Surface.ROTATION_90:
+                insets.top = getStatusBarHeight();
+                insets.right = getNavigationBarHeight();
+                break;
+            case Surface.ROTATION_270:
+                insets.top = getStatusBarHeight();
+                insets.left = getNavigationBarHeight();
+                break;
+        }
+        return insets;
+    }
+
+    public static int getStatusBarHeight() {
+        Resources resources = Resources.getSystem();
+        int resourceId = resources.getIdentifier("status_bar_height", "dimen", "android");
+        return resources.getDimensionPixelSize(resourceId);
+    }
+
+    public static int getNavigationBarHeight() {
+        boolean hasBackKey = KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK);
+        boolean hasHomeKey = KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_HOME);
+        if (hasBackKey && hasHomeKey) {
+            // no navigation bar, unless it is enabled in the settings
+            return 0;
+        } else {
+            // 99% sure there's a navigation bar
+            Resources resources = Resources.getSystem();
+            int resourceId = resources.getIdentifier("navigation_bar_height", "dimen", "android");
+            return resourceId != 0 ? resources.getDimensionPixelSize(resourceId) : 0;
+        }
+    }
 }

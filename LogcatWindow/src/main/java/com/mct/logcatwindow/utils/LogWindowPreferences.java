@@ -49,8 +49,8 @@ public class LogWindowPreferences {
         } else {
             editor().putInt(KEY_PORTRAIT_PANEL_X, position.x)
                     .putInt(KEY_PORTRAIT_PANEL_Y, position.y)
-                    .putInt(KEY_PORTRAIT_PANEL_HEIGHT, size.x)
-                    .putInt(KEY_PORTRAIT_PANEL_WIDTH, size.y)
+                    .putInt(KEY_PORTRAIT_PANEL_WIDTH, size.x)
+                    .putInt(KEY_PORTRAIT_PANEL_HEIGHT, size.y)
                     .apply();
         }
     }
@@ -73,8 +73,8 @@ public class LogWindowPreferences {
             width = pref.getInt(KEY_LANDSCAPE_PANEL_WIDTH, def.x);
             height = pref.getInt(KEY_LANDSCAPE_PANEL_HEIGHT, def.y);
         } else {
-            width = pref.getInt(KEY_PORTRAIT_PANEL_HEIGHT, def.x);
-            height = pref.getInt(KEY_PORTRAIT_PANEL_WIDTH, def.y);
+            width = pref.getInt(KEY_PORTRAIT_PANEL_WIDTH, def.x);
+            height = pref.getInt(KEY_PORTRAIT_PANEL_HEIGHT, def.y);
         }
         return new Point(width, height);
     }

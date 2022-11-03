@@ -26,9 +26,8 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.fragment:fragment:1.5.3'
+    implementation 'androidx.fragment:fragment:1.5.4'
     implementation 'androidx.annotation:annotation:1.5.0'
-    implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'
-    implementation 'com.github.MCT-LIB:TouchUtils:1.0.1'
-    implementation 'com.guolindev.permissionx:permissionx:1.7.1'
+    api 'com.github.MCT-LIB:BubbleChat:1.0.2'
+    api 'com.guolindev.permissionx:permissionx:1.7.1'
 }
